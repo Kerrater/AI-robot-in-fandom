@@ -1,10 +1,12 @@
-# .github/workflows/main.yml
+# 必须保存在：.github/workflows/main.yml
 
 name: Fandom Chat Bot (Simulated User)
 
 on:
+  # 每5分钟执行一次
   schedule:
     - cron: '*/5 * * * *' 
+  # 允许手动触发
   workflow_dispatch:
 
 jobs:
@@ -12,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. 检出代码 (必须，确保文件在工作目录中)
+      # 1. 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -22,16 +24,27 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 3. 安装依赖 (只安装 requests 库，这是必需的)
+      # 3. 安装依赖
       - name: Install requests dependency
         run: pip install requests
 
-      # 4. 执行 Bot 主程序
+      # 4. 执行 Bot 主程序，注入 Secrets
       - name: Run Fandom Bot Task
         env:
+          # CRITICAL: Fandom 认证 Secrets
           FANDOM_BOT_USERNAME: ${{ secrets.FANDOM_BOT_USERNAME }}
           FANDOM_BOT_PASSWORD: ${{ secrets.FANDOM_BOT_PASSWORD }}
+          
+          # CRITICAL: AI 服务 Secrets
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
-          # 仅在调试时设置 BOT_DEBUG_MODE:
-          # BOT_DEBUG_MODE: ${{ secrets.BOT_DEBUG_MODE }} 
+          
+          # 可选配置 (如果设置了 Secrets，将覆盖代码中的默认值)
+          FANDOM_WIKI_DOMAIN: ${{ secrets.FANDOM_WIKI_DOMAIN }}
+          FANDOM_CHAT_PAGE: ${{ secrets.FANDOM_CHAT_PAGE }}
+          OLLAMA_API_BASE: ${{ secrets.OLLAMA_API_BASE }}
+          OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
+          
+          # 调试模式 (在排查问题时，可以设置为 TRUE)
+          # BOT_DEBUG_MODE: TRUE 
+          
         run: python fandom_bot_main.py
