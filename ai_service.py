@@ -1,19 +1,24 @@
 import os
 import json
 import requests
-import time
 import re
 
 # ======================================================================
-#                            【配置项】
+#                            【AI 配置项】
 # ======================================================================
 
-OLLAMA_API_BASE = "https://ollama.com/api" 
-OLLAMA_API_KEY = "f20065c5e86b4d05a94f405a89ca8ff8.JKlIuaZ7J9EljuKjep3bTGlb" 
-OLLAMA_MODEL = "kimi-k2:1t-cloud"
+# !!! 安全获取：从环境变量中读取敏感信息 !!!
+OLLAMA_API_BASE = os.environ.get('OLLAMA_API_BASE', "https://ollama.com/api") 
+OLLAMA_API_KEY = os.environ.get('OLLAMA_API_KEY') # 必须从 GitHub Secrets 读取
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', "kimi-k2:1t-cloud") 
+
+if not OLLAMA_API_KEY:
+    raise ValueError("环境变量 OLLAMA_API_KEY 缺失，请配置 Secret 后运行。")
+
+# 调试开关：只有在 Actions Secret 中设置 BOT_DEBUG_MODE=TRUE 时才打印完整 JSON
+DEBUG_MODE = os.environ.get('BOT_DEBUG_MODE', 'False').upper() == 'TRUE' 
 
 REQUEST_TIMEOUT_SECONDS = 100 
-
 MAX_OUTPUT_TOKENS = 16384
 
 # 【优化后的 Prompt】
@@ -37,6 +42,7 @@ Kerrater于2025年11月25日完成了服务器与暗房网站的集合，成功�
 
 用户评论是：'{user_comment}'
 """
+
 # ======================================================================
 #                            【辅助函数：增强提取逻辑】
 # ======================================================================
@@ -49,45 +55,32 @@ def smart_extract_from_thinking(thinking_text):
     # 1. 尝试提取 <RESPONSE> 标签 (Prompt 要求)
     match_tag = re.search(r'<RESPONSE>(.*?)</RESPONSE>', thinking_text, re.DOTALL)
     if match_tag:
-        print("[提取逻辑] -> ✅ 成功通过 <RESPONSE> 标签提取。")
         return match_tag.group(1).strip()
     
-    # 2. 尝试提取 '起草 - 尝试X' 后的回复 (旧版 GLM/Kimi 格式)
-    # 寻找最后一个 "尝试X" 后面的内容
+    # 2. 尝试提取 '尝试X' 后的回复 (旧版 GLM/Kimi 格式)
     match_attempt = re.findall(r'尝试\d+（.*?）：\s*[\'"]?(.+?)[\'"]?\s*$', thinking_text, re.MULTILINE)
-    
     if match_attempt:
-        print(f"[提取逻辑] -> ⚠️ 成功提取 '尝试回复' (非标准格式)。")
         # 返回最后一个尝试回复
         return match_attempt[-1].strip()
     
-    # 3. 如果以上都失败，则尝试去除明显的分析/思考前缀，返回剩余内容。
-    # 常见的思考前缀：1. 分析用户输入：, 思考过程：, Reply:
+    # 3. 如果以上都失败，则尝试去除明显的分析/思考前缀
     clean_text = re.sub(r'^(.*?(\s*[\d\.]\s*|\s*[a-zA-Z]+\s*)\s*[:：])', '', thinking_text, count=1, flags=re.MULTILINE).strip()
     
     if len(clean_text) > 20: # 确保清理后的文本不是太短的残余
-        print("[提取逻辑] -> ⚠️ 尝试去除思考前缀后提取。")
         return clean_text
     
     # 4. 实在不行，返回思考文本的开头作为警告
-    print("[提取逻辑] -> ❌ 无法提取有效回复，返回警告。")
     return f"【思考失败，无法提取回复】: {thinking_text[:100]}..."
 
 
 # ======================================================================
-#                       【Ollama API 调用 V8：添加调试开关】
+#                        【Ollama API 调用 V8】
 # ======================================================================
 
-# 新增一个环境变量来控制是否打印详细的 JSON 响应，以便在 Actions 中调试
-DEBUG_MODE = os.environ.get('BOT_DEBUG_MODE', 'False').upper() == 'TRUE'
-
 def get_glm_response_v8(user_comment):
-    # ...
+    """最终修复版：非流式请求，并使用智能提取逻辑。"""
     
-    # 1. 填充完整 Prompt
     full_prompt = FULL_PROMPT_TEMPLATE.format(user_comment=user_comment)
-    
-    print(f"-> 正在连接 Ollama Cloud API: {OLLAMA_API_BASE} (超时: {REQUEST_TIMEOUT_SECONDS}秒, Token限制: {MAX_OUTPUT_TOKENS})...")
     
     headers = {'Authorization': f'Bearer {OLLAMA_API_KEY}', 'Content-Type': 'application/json'}
     
@@ -109,12 +102,11 @@ def get_glm_response_v8(user_comment):
 
         response_json = response.json()
         
-        # --- 调试信息 (只有在设置了 BOT_DEBUG_MODE=TRUE 时才打印完整 JSON) ---
+        # 调试信息 (只有在设置了 BOT_DEBUG_MODE=TRUE 时才打印完整 JSON)
         if DEBUG_MODE:
              print("\n--- 原始 API 响应开始 (DEBUG MODE) ---")
              print(json.dumps(response_json, indent=2, ensure_ascii=False)) 
              print("--- 原始 API 响应结束 (DEBUG MODE) ---\n")
-        # ------------------------------------------------------------------
 
         # 1. 获取 raw_output
         raw_output = response_json.get('message', {}).get('content', '').strip()
@@ -136,7 +128,5 @@ def get_glm_response_v8(user_comment):
         return f"❌ Ollama API 调用失败。错误: {e}"
 
 if __name__ == "__main__":
-    # 移除原有的测试逻辑，因为 ai_service 不应该自行进行测试
     print("【警告】ai_service.py 通常不应直接运行。请通过 fandom_bot_main.py 调用。")
     pass
-
