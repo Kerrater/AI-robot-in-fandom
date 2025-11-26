@@ -81,8 +81,8 @@ def smart_extract_from_thinking(thinking_text):
 # 新增一个环境变量来控制是否打印详细的 JSON 响应，以便在 Actions 中调试
 DEBUG_MODE = os.environ.get('BOT_DEBUG_MODE', 'False').upper() == 'TRUE'
 
-def get_glm_response_v8(user_comment): # 接收用户评论
-    """最终修复版：非流式请求，并使用智能提取逻辑。"""
+def get_glm_response_v8(user_comment):
+    # ...
     
     # 1. 填充完整 Prompt
     full_prompt = FULL_PROMPT_TEMPLATE.format(user_comment=user_comment)
@@ -139,3 +139,4 @@ if __name__ == "__main__":
     # 移除原有的测试逻辑，因为 ai_service 不应该自行进行测试
     print("【警告】ai_service.py 通常不应直接运行。请通过 fandom_bot_main.py 调用。")
     pass
+
