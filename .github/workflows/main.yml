@@ -3,51 +3,35 @@
 name: Fandom Chat Bot (Simulated User)
 
 on:
-  # 1. 设置定时触发：每5分钟执行一次任务
   schedule:
-    # 这是标准的 Cron 表达式：*/5 * * * * 表示每小时的每隔 5 分钟
     - cron: '*/5 * * * *' 
-  
-  # 2. 允许手动触发：可以在 GitHub Actions 页面手动点击运行
   workflow_dispatch:
 
 jobs:
   run_bot_task:
-    runs-on: ubuntu-latest # 使用最新的 Ubuntu 虚拟机环境
+    runs-on: ubuntu-latest
     
     steps:
-      # 1. 检出代码 (必须)
+      # 1. 检出代码 (必须，确保文件在工作目录中)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境 (使用 Python 3.11)
+      # 2. 设置 Python 环境
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # 启用缓存加速依赖安装
 
-      # 3. 安装依赖 (只安装 requests 库)
-      - name: Install dependencies
-        run: |
-          pip install requests
+      # 3. 安装依赖 (只安装 requests 库，这是必需的)
+      - name: Install requests dependency
+        run: pip install requests
 
       # 4. 执行 Bot 主程序
-      # 这是最关键的一步，我们将 Secrets 注入到执行环境中
       - name: Run Fandom Bot Task
         env:
-          # Fandom 认证 Secrets
           FANDOM_BOT_USERNAME: ${{ secrets.FANDOM_BOT_USERNAME }}
           FANDOM_BOT_PASSWORD: ${{ secrets.FANDOM_BOT_PASSWORD }}
-          
-          # AI 服务 Secrets
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
-          
-          # 可选配置 (如果不设置 Secrets，则使用代码中的默认值)
-          FANDOM_WIKI_DOMAIN: ${{ secrets.FANDOM_WIKI_DOMAIN }}
-          FANDOM_CHAT_PAGE: ${{ secrets.FANDOM_CHAT_PAGE }}
-          OLLAMA_API_BASE: ${{ secrets.OLLAMA_API_BASE }}
-          OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
-
-        # 运行您的主脚本
+          # 仅在调试时设置 BOT_DEBUG_MODE:
+          # BOT_DEBUG_MODE: ${{ secrets.BOT_DEBUG_MODE }} 
         run: python fandom_bot_main.py
