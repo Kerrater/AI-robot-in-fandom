@@ -1,50 +1,41 @@
-# 必须保存在：.github/workflows/main.yml
+name: Fandom Bot 5-Minute Scheduler
 
-name: Fandom Chat Bot (Simulated User)
-
+# 触发器：设置每 5 分钟运行一次
 on:
-  # 每5分钟执行一次
   schedule:
+    # cron 表达式：每小时的 0, 5, 10, ... 55 分钟执行
     - cron: '*/5 * * * *' 
-  # 允许手动触发
+  # 手动触发：允许您随时点击按钮测试运行
   workflow_dispatch:
 
 jobs:
-  run_bot_task:
+  run_fandom_bot:
     runs-on: ubuntu-latest
     
+    # 🌟 关键：将 Secrets 注入为环境变量
+    env:
+      # Fandom 账号信息，从 Secret 中安全读取
+      FANDOM_BOT_USERNAME: 'Kerrater@Dark_Zhu_KerVs' 
+      FANDOM_BOT_PASSWORD: ${{ secrets.FANDOM_BOT_PASSWORD }} 
+      # Ollama 密钥，从 Secret 中安全读取
+      OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}         
+      # Ollama 基础 API 地址 (如果需要更改模型/地址，可以在这里设置)
+      OLLAMA_API_BASE: "https://ollama.com/api" 
+      # OLLAMA_MODEL: "kimi-k2:1t-cloud" # 如果需要设置模型，也可以在这里设置
+
     steps:
-      # 1. 检出代码
-      - name: Checkout repository
+      - name: 1. 检出代码 (获取脚本)
         uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境
-      - name: Set up Python 3.11
+      - name: 2. 设置 Python 环境
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.x' 
 
-      # 3. 安装依赖
-      - name: Install requests dependency
-        run: pip install requests
+      - name: 3. 安装依赖 (requests)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # 4. 执行 Bot 主程序，注入 Secrets
-      - name: Run Fandom Bot Task
-        env:
-          # CRITICAL: Fandom 认证 Secrets
-          FANDOM_BOT_USERNAME: ${{ secrets.FANDOM_BOT_USERNAME }}
-          FANDOM_BOT_PASSWORD: ${{ secrets.FANDOM_BOT_PASSWORD }}
-          
-          # CRITICAL: AI 服务 Secrets
-          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
-          
-          # 可选配置 (如果设置了 Secrets，将覆盖代码中的默认值)
-          FANDOM_WIKI_DOMAIN: ${{ secrets.FANDOM_WIKI_DOMAIN }}
-          FANDOM_CHAT_PAGE: ${{ secrets.FANDOM_CHAT_PAGE }}
-          OLLAMA_API_BASE: ${{ secrets.OLLAMA_API_BASE }}
-          OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
-          
-          # 调试模式 (在排查问题时，可以设置为 TRUE)
-          # BOT_DEBUG_MODE: TRUE 
-          
+      - name: 4. 运行单次任务脚本
         run: python fandom_bot_main.py
