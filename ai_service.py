@@ -93,7 +93,7 @@ def get_glm_response_v8(user_comment):
     
     try:
         response = requests.post(
-            f"{OLLAMA_API_BASE}/chat",
+            f"{OLLAMA_API_BASE}/v1/chat/completions", 
             headers=headers,
             json=payload,
             timeout=REQUEST_TIMEOUT_SECONDS
@@ -130,3 +130,4 @@ def get_glm_response_v8(user_comment):
 if __name__ == "__main__":
     print("【警告】ai_service.py 通常不应直接运行。请通过 fandom_bot_main.py 调用。")
     pass
+
